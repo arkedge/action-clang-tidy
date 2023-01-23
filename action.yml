@@ -1,0 +1,79 @@
+name: 'action-clang-tidy'
+description: 'GitHub Action for clang-tidy with reviewdog'
+
+author: '@sksat'
+
+inputs:
+  github_token:
+    description: 'GitHub token for reviewdog'
+    default: '${{ github.token }}'
+  workdir:
+    description: 'working directory'
+    default: '.'
+  tool_name:
+    description: 'reviewdog name'
+    default: 'clang-tidy'
+  level:
+    description: 'reviewdog level [info,warning,error]'
+    default: 'warning'
+  reporter:
+    description: |
+      Reporter of reviewdog command [github-pr-check,github-pr-review,github-check].
+      Default is github-pr-check.
+      github-pr-review can use Markdown and add a link to rule page in reviewdog reports.
+    default: 'github-pr-check'
+  filter_mode:
+    description: 'reviewdog filter_mode'
+    default: 'nofilter'
+  fail_on_error:
+    description: 'exit code for reviewdog on error'
+    default: 'true'
+  reviewdog_flags:
+    description: 'extra reviewdog option'
+    default: ''
+
+runs:
+  using: "composite"
+  steps:
+    - name: install reviewdog
+      uses: reviewdog/action-setup@v1.0.3
+
+    - name: install clang-tidy
+      #if: runner.os == 'Linux'
+      shell: bash
+      run: sudo apt-get install -y clang-tidy-11
+
+    - name: Run clang-tidy
+      continue-on-error: true
+      shell: bash
+      working-directory: ${{ inputs.workdir }}
+      run: |
+        run-clang-tidy-11 \
+          | sed "s|$(pwd)/||g" > clang_tidy_raw.log
+
+    - name: Remove clang-tidy duplicate error
+      shell: bash
+      run: |
+        python ${{ github.action_path }}/remove_duplicate_error.py ${{ inputs.workdir }}/clang_tidy_raw.log "clang-tidy" \
+          | tee ${{ inputs.workdir }}/clang_tidy.log
+
+    - name: reviewdog
+      shell: bash
+      working-directory: ${{ inputs.workdir }}
+      env:
+        REVIEWDOG_GITHUB_API_TOKEN: ${{ inputs.github_token }}
+      run: |
+        reviewdog \
+          -name "${{ inputs.tool_name }}" \
+          -level "${{ inputs.level }}" \
+          -fail-on-error="${{ inputs.fail_on_error }}" \
+          -filter-mode="${{ inputs.filter_mode }}" \
+          -diff="git diff FETCH_HEAD" \
+          -reporter="${{ inputs.reporter }}" \
+          -efm="%-Gclang-tidy%s" \
+          -efm="%-GError while processing%s" \
+          -efm="%W%f:%l:%c: warning: %m" \
+          -efm="%E%f:%l:%c: error: %m" \
+          -efm="%C%m" \
+          ${{ inputs.reviewdog_flags }} \
+          < ./clang_tidy.log

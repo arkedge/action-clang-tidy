@@ -36,7 +36,7 @@ runs:
   using: "composite"
   steps:
     - name: install reviewdog
-      uses: reviewdog/action-setup@v1.0.4
+      uses: reviewdog/action-setup@v1.0.5
 
     - name: install clang-tidy
       #if: runner.os == 'Linux'

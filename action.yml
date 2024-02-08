@@ -54,7 +54,7 @@ runs:
     - name: Remove clang-tidy duplicate error
       shell: bash
       run: |
-        python ${{ github.action_path }}/remove_duplicate_error.py ${{ inputs.workdir }}/clang_tidy_raw.log "clang-tidy" \
+        python ${{ github.action_path }}/remove_duplicate_error.py ${{ inputs.workdir }}/clang_tidy_raw.log "clang-tidy-11" \
           | tee ${{ inputs.workdir }}/clang_tidy.log
 
     - name: reviewdog

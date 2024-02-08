@@ -1,0 +1,25 @@
+name: Test action-clang-tidy workflow
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+
+      - name: CMake
+        env:
+          CC: clang
+        working-directory: test
+        run: cmake -B ./build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+      - uses: ./
+        with:
+          workdir: ./test/build
+          reporter: github-pr-review
+          fail_on_error: false

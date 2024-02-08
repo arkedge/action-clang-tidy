@@ -21,3 +21,4 @@ jobs:
       - uses: ./
         with:
           workdir: ./test/build
+          reporter: github-pr-review

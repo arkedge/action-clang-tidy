@@ -7,6 +7,11 @@ on:
 
 jobs:
   test:
+    strategy:
+      fail-fast: false
+      matrix:
+        reporter: [ github-check, github-pr-review ]
+
     runs-on: ubuntu-22.04
 
     steps:
@@ -21,5 +26,5 @@ jobs:
       - uses: ./
         with:
           workdir: ./test/build
-          reporter: github-pr-review
+          reporter: ${{ matrix.reporter }}
           fail_on_error: false

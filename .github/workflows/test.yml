@@ -10,7 +10,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        reporter: [ github-check, github-pr-review ]
+        reporter: [ github-check, github-pr-review, github-pr-annotations ]
 
     runs-on: ubuntu-22.04
 

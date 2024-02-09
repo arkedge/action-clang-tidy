@@ -28,6 +28,9 @@ inputs:
   fail_on_error:
     description: 'exit code for reviewdog on error'
     default: 'true'
+  reviewdog_version:
+    description: 'reviewdog version'
+    default: 'latest'
   reviewdog_flags:
     description: 'extra reviewdog option'
     default: ''
@@ -37,6 +40,8 @@ runs:
   steps:
     - name: install reviewdog
       uses: reviewdog/action-setup@v1.2.1
+      with:
+        reviewdog_version: ${{ inputs.reviewdog_version }}
 
     - name: install clang-tidy
       #if: runner.os == 'Linux'

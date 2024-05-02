@@ -39,7 +39,7 @@ runs:
   using: "composite"
   steps:
     - name: install reviewdog
-      uses: reviewdog/action-setup@v1.2.1
+      uses: reviewdog/action-setup@v1.3.0
       with:
         reviewdog_version: ${{ inputs.reviewdog_version }}
 

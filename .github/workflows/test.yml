@@ -28,3 +28,46 @@ jobs:
           workdir: ./test/build
           reporter: ${{ matrix.reporter }}
           fail_on_error: false
+
+  # test/main.c always produces warnings, so fail_level decides whether the
+  # step fails. Assert both directions so the flag cannot silently stop being
+  # passed to reviewdog.
+  test-fail-level:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - fail_level: none
+            expected: success
+          - fail_level: any
+            expected: failure
+
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+
+      - name: CMake
+        env:
+          CC: clang
+        working-directory: test
+        run: cmake -B ./build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+      - uses: ./
+        id: clang_tidy
+        continue-on-error: true
+        with:
+          workdir: ./test/build
+          reporter: github-check
+          fail_level: ${{ matrix.fail_level }}
+
+      - name: assert outcome
+        env:
+          OUTCOME: ${{ steps.clang_tidy.outcome }}
+          EXPECTED: ${{ matrix.expected }}
+        run: |
+          echo "fail_level=${{ matrix.fail_level }} outcome=${OUTCOME} expected=${EXPECTED}"
+          if [ "${OUTCOME}" != "${EXPECTED}" ]; then
+            echo "::error::expected ${EXPECTED} with fail_level=${{ matrix.fail_level }}, got ${OUTCOME}"
+            exit 1
+          fi

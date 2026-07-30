@@ -26,8 +26,20 @@ inputs:
     description: 'reviewdog filter_mode'
     default: 'nofilter'
   fail_on_error:
-    description: 'exit code for reviewdog on error'
+    description: |
+      exit code for reviewdog on error.
+      Deprecated by reviewdog in favour of fail_level; only used when
+      fail_level is empty.
     default: 'true'
+  fail_level:
+    description: |
+      reviewdog fail_level [none,any,info,warning,error].
+      Takes precedence over fail_on_error when set. Requires reviewdog
+      v0.20.2 or later, which is where -fail-level was introduced.
+      Note that reviewdog v0.19.0 changed -fail-on-error for the
+      github-[pr-]check reporters to exit 1 on any severity, so
+      fail_level=error is what restores the pre-v0.19.0 behaviour there.
+    default: ''
   reviewdog_version:
     description: 'reviewdog version'
     default: 'latest'
@@ -68,10 +80,18 @@ runs:
       env:
         REVIEWDOG_GITHUB_API_TOKEN: ${{ inputs.github_token }}
       run: |
+        # -fail-on-error is deprecated since reviewdog v0.20.2 in favour of
+        # -fail-level. Pass exactly one of them, never both.
+        if [ -n "${{ inputs.fail_level }}" ]; then
+          fail_flag="-fail-level=${{ inputs.fail_level }}"
+        else
+          fail_flag="-fail-on-error=${{ inputs.fail_on_error }}"
+        fi
+
         reviewdog \
           -name "${{ inputs.tool_name }}" \
           -level "${{ inputs.level }}" \
-          -fail-on-error="${{ inputs.fail_on_error }}" \
+          "${fail_flag}" \
           -filter-mode="${{ inputs.filter_mode }}" \
           -diff="git diff FETCH_HEAD" \
           -reporter="${{ inputs.reporter }}" \

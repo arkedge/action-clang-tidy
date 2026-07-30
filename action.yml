@@ -59,8 +59,14 @@ runs:
       shell: bash
       working-directory: ${{ inputs.workdir }}
       run: |
+        # run-clang-tidy passes --use-color to clang-tidy from version 14 on,
+        # even when stdout is a pipe. The escape sequences land between the
+        # position and the severity, so reviewdog's
+        # -efm="%W%f:%l:%c: warning: %m" stops matching and nothing gets
+        # reported. Strip them rather than relying on a --use-color flag that
+        # not every clang-tidy version accepts.
         run-clang-tidy-${{ inputs.clang_tidy_version }} \
-          | sed "s|$(pwd)/||g" > clang_tidy_raw.log
+          | sed -e "s|$(pwd)/||g" -e 's/\x1b\[[0-9;]*[a-zA-Z]//g' > clang_tidy_raw.log
 
     - name: Remove clang-tidy duplicate error
       shell: bash

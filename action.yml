@@ -10,6 +10,12 @@ inputs:
   workdir:
     description: 'working directory'
     default: '.'
+  clang_tidy_version:
+    description: |
+      Version suffix of the clang-tidy apt package to install (e.g. 14 installs
+      clang-tidy-14 and runs run-clang-tidy-14).
+      14 is the only version packaged by both Ubuntu 22.04 and 24.04.
+    default: '14'
   tool_name:
     description: 'reviewdog name'
     default: 'clang-tidy'
@@ -46,20 +52,26 @@ runs:
     - name: install clang-tidy
       #if: runner.os == 'Linux'
       shell: bash
-      run: sudo apt-get install -y clang-tidy-11
+      run: sudo apt-get install -y clang-tidy-${{ inputs.clang_tidy_version }}
 
     - name: Run clang-tidy
       continue-on-error: true
       shell: bash
       working-directory: ${{ inputs.workdir }}
       run: |
-        run-clang-tidy-11 \
-          | sed "s|$(pwd)/||g" > clang_tidy_raw.log
+        # run-clang-tidy passes --use-color to clang-tidy from version 14 on,
+        # even when stdout is a pipe. The escape sequences land between the
+        # position and the severity, so reviewdog's
+        # -efm="%W%f:%l:%c: warning: %m" stops matching and nothing gets
+        # reported. Strip them rather than relying on a --use-color flag that
+        # not every clang-tidy version accepts.
+        run-clang-tidy-${{ inputs.clang_tidy_version }} \
+          | sed -e "s|$(pwd)/||g" -e 's/\x1b\[[0-9;]*[a-zA-Z]//g' > clang_tidy_raw.log
 
     - name: Remove clang-tidy duplicate error
       shell: bash
       run: |
-        python ${{ github.action_path }}/remove_duplicate_error.py ${{ inputs.workdir }}/clang_tidy_raw.log "clang-tidy-11" \
+        python3 ${{ github.action_path }}/remove_duplicate_error.py ${{ inputs.workdir }}/clang_tidy_raw.log "clang-tidy-${{ inputs.clang_tidy_version }}" \
           | tee ${{ inputs.workdir }}/clang_tidy.log
 
     - name: reviewdog

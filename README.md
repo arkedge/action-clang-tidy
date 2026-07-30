@@ -25,3 +25,25 @@ jobs:
     - name: Build
      run: cmake --build ./build
 ```
+
+## clang-tidy version
+
+`clang-tidy` is installed from the runner's apt repositories, so the available
+versions depend on the Ubuntu release:
+
+| | Ubuntu 22.04 | Ubuntu 24.04 |
+|---|---|---|
+| `clang-tidy-11` | ✅ | ❌ not packaged |
+| `clang-tidy-14` | ✅ | ✅ |
+| `clang-tidy-18` | ❌ not packaged | ✅ |
+
+`clang_tidy_version` defaults to `14`, the only version packaged by both, so
+the action works on `ubuntu-22.04`, `ubuntu-24.04` and `ubuntu-latest`.
+Override it to pick a different one:
+
+```yaml
+    - uses: arkedge/action-clang-tidy
+      with:
+        workdir: ./build
+        clang_tidy_version: '18'   # ubuntu-24.04 only
+```

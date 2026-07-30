@@ -10,9 +10,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        runner: [ ubuntu-22.04, ubuntu-24.04 ]
         reporter: [ github-check, github-pr-review, github-pr-annotations ]
 
-    runs-on: ubuntu-22.04
+    runs-on: ${{ matrix.runner }}
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -28,3 +29,28 @@ jobs:
           workdir: ./test/build
           reporter: ${{ matrix.reporter }}
           fail_on_error: false
+
+      # reviewdog runs with fail_on_error: false above, so a broken log would
+      # otherwise go unnoticed. remove_duplicate_error.py splits the raw log on
+      # the clang-tidy binary name and silently emits the whole log twice when
+      # that marker does not match (str.find returns -1), so assert the parsed
+      # log explicitly.
+      - name: assert clang-tidy log was parsed
+        working-directory: ./test/build
+        run: |
+          cat clang_tidy.log
+
+          # dedup can only ever remove content
+          raw="$(wc -c < clang_tidy_raw.log)"
+          out="$(wc -c < clang_tidy.log)"
+          echo "raw=${raw} parsed=${out}"
+          if [ "$out" -gt "$raw" ]; then
+            echo "::error::parsed log is larger than the raw log; the clang-tidy marker did not match"
+            exit 1
+          fi
+
+          # the known diagnostics in test/main.c must survive parsing
+          if ! grep -qE 'main\.c:[0-9]+:[0-9]+: warning:' clang_tidy.log; then
+            echo "::error::no warning for test/main.c found in the parsed log"
+            exit 1
+          fi
